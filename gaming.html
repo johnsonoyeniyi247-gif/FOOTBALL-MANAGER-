@@ -1,0 +1,196 @@
+// STREET BALL - Unreal Engine 5 Android 3D Street Football Game
+// Main Combined Starter Code
+// Engine: Unreal Engine 5
+// Platform: Android
+// Mode: Offline 5v5
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Character.h"
+#include "Components/SphereComponent.h"
+#include "Camera/CameraComponent.h"
+#include "GameFramework/SpringArmComponent.h"
+#include "StreetBallCharacter.generated.h"
+
+UCLASS()
+class STREETBALL_API AStreetBallCharacter : public ACharacter
+{
+    GENERATED_BODY()
+
+public:
+    AStreetBallCharacter();
+
+protected:
+    virtual void BeginPlay() override;
+
+public:
+    virtual void Tick(float DeltaTime) override;
+    virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+    // CAMERA
+    UPROPERTY(VisibleAnywhere)
+    USpringArmComponent* SpringArm;
+
+    UPROPERTY(VisibleAnywhere)
+    UCameraComponent* Camera;
+
+    // PLAYER SETTINGS
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    float WalkSpeed = 600.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    float SprintSpeed = 1000.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    float Stamina = 100.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    float ShootPower = 3500.f;
+
+    // BALL
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    USphereComponent* Football;
+
+    // MOVEMENT
+    void MoveForward(float Value);
+    void MoveRight(float Value);
+
+    // ACTIONS
+    void SprintStart();
+    void SprintStop();
+
+    void ShootBall();
+    void PassBall();
+    void SkillMove();
+    void Tackle();
+
+    bool bIsSprinting;
+};
+
+#include "StreetBallCharacter.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Components/InputComponent.h"
+
+AStreetBallCharacter::AStreetBallCharacter()
+{
+    PrimaryActorTick.bCanEverTick = true;
+
+    // CAMERA ARM
+    SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
+    SpringArm->SetupAttachment(RootComponent);
+    SpringArm->TargetArmLength = 350.f;
+    SpringArm->bUsePawnControlRotation = true;
+
+    // CAMERA
+    Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
+    Camera->SetupAttachment(SpringArm);
+
+    // FOOTBALL
+    Football = CreateDefaultSubobject<USphereComponent>(TEXT("Football"));
+    Football->SetupAttachment(RootComponent);
+
+    Football->SetSimulatePhysics(true);
+    Football->SetEnableGravity(true);
+
+    bIsSprinting = false;
+}
+
+void AStreetBallCharacter::BeginPlay()
+{
+    Super::BeginPlay();
+
+    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+}
+
+void AStreetBallCharacter::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+
+    // STAMINA SYSTEM
+    if (bIsSprinting)
+    {
+        Stamina -= DeltaTime * 10.f;
+
+        if (Stamina <= 0)
+        {
+            SprintStop();
+        }
+    }
+    else
+    {
+        if (Stamina < 100.f)
+        {
+            Stamina += DeltaTime * 5.f;
+        }
+    }
+}
+
+void AStreetBallCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+    Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+    // MOVEMENT
+    PlayerInputComponent->BindAxis("MoveForward", this, &AStreetBallCharacter::MoveForward);
+    PlayerInputComponent->BindAxis("MoveRight", this, &AStreetBallCharacter::MoveRight);
+
+    // ACTIONS
+    PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &AStreetBallCharacter::SprintStart);
+    PlayerInputComponent->BindAction("Sprint", IE_Released, this, &AStreetBallCharacter::SprintStop);
+
+    PlayerInputComponent->BindAction("Shoot", IE_Pressed, this, &AStreetBallCharacter::ShootBall);
+
+    PlayerInputComponent->BindAction("Pass", IE_Pressed, this, &AStreetBallCharacter::PassBall);
+
+    PlayerInputComponent->BindAction("Skill", IE_Pressed, this, &AStreetBallCharacter::SkillMove);
+
+    PlayerInputComponent->BindAction("Tackle", IE_Pressed, this, &AStreetBallCharacter::Tackle);
+}
+
+void AStreetBallCharacter::MoveForward(float Value)
+{
+    AddMovementInput(GetActorForwardVector(), Value);
+}
+
+void AStreetBallCharacter::MoveRight(float Value)
+{
+    AddMovementInput(GetActorRightVector(), Value);
+}
+
+void AStreetBallCharacter::SprintStart()
+{
+    bIsSprinting = true;
+    GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
+}
+
+void AStreetBallCharacter::SprintStop()
+{
+    bIsSprinting = false;
+    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+}
+
+void AStreetBallCharacter::ShootBall()
+{
+    FVector Force = GetActorForwardVector() * ShootPower;
+    Football->AddImpulse(Force);
+
+    UE_LOG(LogTemp, Warning, TEXT("SHOT FIRED"));
+}
+
+void AStreetBallCharacter::PassBall()
+{
+    FVector Force = GetActorForwardVector() * 1500.f;
+    Football->AddImpulse(Force);
+
+    UE_LOG(LogTemp, Warning, TEXT("PASS"));
+}
+
+void AStreetBallCharacter::SkillMove()
+{
+    UE_LOG(LogTemp, Warning, TEXT("SKILL MOVE"));
+}
+
+void AStreetBallCharacter::Tackle()
+{
+    UE_LOG(LogTemp, Warning, TEXT("TACKLE"));
+}
